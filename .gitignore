@@ -1,0 +1,8 @@
+node_modules
+.next
+*.tsbuildinfo
+public/monaco
+
+public/pyodide
+public/python-runtime.py
+__pycache__
