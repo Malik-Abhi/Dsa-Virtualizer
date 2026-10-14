@@ -356,7 +356,7 @@ export default function Canvas({
                   {loop ? (
                     <LoopBlock loop={loop} />
                   ) : frame ? (
-                    <RuntimeFrame frame={frame} />
+                    <RuntimeFrame frame={frame} loops={memory?.loops} />
                   ) : object && memory ? (
                     <HeapObject object={object} memory={memory} />
                   ) : null}

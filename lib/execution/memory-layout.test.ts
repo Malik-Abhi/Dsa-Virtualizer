@@ -1,7 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { executeJavaScript } from "./interpreter";
-import { layoutMemory, edgePath } from "../visualization/memory-layout";
+import {
+  layoutMemory,
+  edgePath,
+  FRAME_LOOP_LABEL_HEIGHT,
+} from "../visualization/memory-layout";
 const layout = (source: string) => {
   const result = executeJavaScript(source);
   assert.equal(result.error, undefined);
@@ -157,7 +161,7 @@ test("shared and cyclic arrays remain single cards with every reference intact",
   assertNoOverlaps(graph);
 });
 
-test("loop blocks share heap references and their ports stay inside their cards", () => {
+test("for loops share their frame instead of creating extra cards or arrows", () => {
   const result = executeJavaScript(
     "const A=[[1,2]]; const row=A[0]; for(const item of A){ item[0]++; }",
   );
@@ -168,17 +172,33 @@ test("loop blocks share heap references and their ports stay inside their cards"
     ),
   )!.memory;
   const graph = layoutMemory(memory);
-  assert.equal(graph.nodes.filter((node) => node.kind === "loop").length, 1);
-  const loop = graph.nodes.find((node) => node.kind === "loop")!;
+  const plain = layoutMemory({ ...memory, loops: [] });
+  assert.equal(graph.nodes.filter((node) => node.kind === "loop").length, 0);
   const frame = graph.nodes.find((node) => node.kind === "frame")!;
-  assert.ok(loop.y >= frame.y + frame.height);
-  const frameReference = graph.edges.find(
-    (edge) => edge.source === frame.id && edge.label === "row",
-  )!;
-  const loopReference = graph.edges.find(
-    (edge) => edge.source === loop.id && edge.label === "item",
-  )!;
-  assert.equal(frameReference.target, loopReference.target);
-  assert.ok(loopReference.from.y > 0 && loopReference.from.y < loop.height);
+  const plainFrame = plain.nodes.find((node) => node.id === frame.id)!;
+  assert.equal(frame.height - plainFrame.height, FRAME_LOOP_LABEL_HEIGHT);
+  assert.deepEqual(graph.edges, plain.edges);
   assert.equal(graph.nodes.filter((node) => node.kind === "heap").length, 2);
+});
+
+test("nested for labels belong only to their call frame and while cards remain available", () => {
+  const result = executeJavaScript(
+    "function f(){for(let i=0;i<1;i++){for(let j=0;j<1;j++){let k=0;while(k<1){k++;}}}} f();",
+  );
+  assert.equal(result.error, undefined);
+  const memory = result.steps.find(
+    (step) => step.memory.loops?.length === 3,
+  )!.memory;
+  const graph = layoutMemory(memory);
+  const plain = layoutMemory({ ...memory, loops: [] });
+  const caller = graph.nodes.find(
+    (node) => node.id === `frame:${memory.frames.at(-1)!.id}`,
+  )!;
+  const plainCaller = plain.nodes.find((node) => node.id === caller.id)!;
+  assert.equal(caller.height - plainCaller.height, FRAME_LOOP_LABEL_HEIGHT * 2);
+  assert.equal(
+    graph.nodes.find((node) => node.id === "frame:global")!.height,
+    plain.nodes.find((node) => node.id === "frame:global")!.height,
+  );
+  assert.equal(graph.nodes.filter((node) => node.kind === "loop").length, 1);
 });

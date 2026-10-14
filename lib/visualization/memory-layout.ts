@@ -1,8 +1,16 @@
-import type { HeapObject, MemorySnapshot, MemoryValue } from "@/types/memory";
+import type {
+  HeapObject,
+  MemorySnapshot,
+  MemoryValue,
+  RuntimeLoop,
+} from "@/types/memory";
 export const FRAME_WIDTH = 260,
   FRAME_ROW = 34,
   HEAP_ROW = 32,
   ARRAY_CELL = 44;
+export const FRAME_LOOP_LABEL_HEIGHT = 22;
+export const isInlineForLoop = (loop: RuntimeLoop) =>
+  loop.kind === "for" || loop.kind === "for…of";
 export type Point = { x: number; y: number };
 export type MemoryNode = Point & {
   id: string;
@@ -64,7 +72,11 @@ export function layoutMemory(memory: MemorySnapshot): MemoryLayout {
       64 +
       (frame.variables.length +
         (frame.kind === "function" || frame.returned ? 1 : 0)) *
-        FRAME_ROW;
+        FRAME_ROW +
+      (memory.loops ?? []).filter(
+        (loop) => loop.frameId === frame.id && isInlineForLoop(loop),
+      ).length *
+        FRAME_LOOP_LABEL_HEIGHT;
     nodes.push({
       id: frameNodeId(frame.id),
       kind: "frame",
@@ -75,7 +87,7 @@ export function layoutMemory(memory: MemorySnapshot): MemoryLayout {
     });
     frameY += height + 16;
     for (const loop of memory.loops ?? []) {
-      if (loop.frameId !== frame.id) continue;
+      if (loop.frameId !== frame.id || isInlineForLoop(loop)) continue;
       const loopHeight = 108 + loop.variables.length * FRAME_ROW;
       nodes.push({
         id: loopNodeId(loop.id),
@@ -260,7 +272,9 @@ export function layoutMemory(memory: MemorySnapshot): MemoryLayout {
         true,
       );
   }
-  for (const loop of memory.loops ?? [])
+  for (const loop of (memory.loops ?? []).filter(
+    (loop) => !isInlineForLoop(loop),
+  ))
     loop.variables.forEach((variable, i) =>
       edge(
         `${loop.id}:${variable.id}`,

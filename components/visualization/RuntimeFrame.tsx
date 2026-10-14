@@ -1,8 +1,18 @@
 "use client";
 import { Layers, Globe2, GripVertical } from "lucide-react";
-import type { RuntimeFrame as Frame } from "@/types/memory";
+import type { RuntimeFrame as Frame, RuntimeLoop } from "@/types/memory";
+import { isInlineForLoop } from "@/lib/visualization/memory-layout";
 import MemoryValueBox from "./MemoryValueBox";
-export default function RuntimeFrame({ frame }: { frame: Frame }) {
+export default function RuntimeFrame({
+  frame,
+  loops = [],
+}: {
+  frame: Frame;
+  loops?: RuntimeLoop[];
+}) {
+  const inlineLoops = loops.filter(
+    (loop) => loop.frameId === frame.id && isInlineForLoop(loop),
+  );
   return (
     <section
       className={`runtime-frame frame-${frame.status}`}
@@ -55,6 +65,15 @@ export default function RuntimeFrame({ frame }: { frame: Frame }) {
           </div>
         )}
       </div>
+      {inlineLoops.map((loop) => (
+        <div
+          className="frame-loop-label"
+          key={loop.id}
+          title={`${loop.condition} · iteration ${loop.iteration} · ${loop.status}`}
+        >
+          {loop.kind} loop · line {loop.line}
+        </div>
+      ))}
     </section>
   );
 }
