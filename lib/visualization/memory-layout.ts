@@ -8,7 +8,6 @@ export const FRAME_WIDTH = 260,
   FRAME_ROW = 34,
   HEAP_ROW = 32,
   ARRAY_CELL = 44;
-export const FRAME_LOOP_LABEL_HEIGHT = 22;
 export const isInlineForLoop = (loop: RuntimeLoop) =>
   loop.kind === "for" || loop.kind === "for…of";
 export type Point = { x: number; y: number };
@@ -72,11 +71,7 @@ export function layoutMemory(memory: MemorySnapshot): MemoryLayout {
       64 +
       (frame.variables.length +
         (frame.kind === "function" || frame.returned ? 1 : 0)) *
-        FRAME_ROW +
-      (memory.loops ?? []).filter(
-        (loop) => loop.frameId === frame.id && isInlineForLoop(loop),
-      ).length *
-        FRAME_LOOP_LABEL_HEIGHT;
+        FRAME_ROW;
     nodes.push({
       id: frameNodeId(frame.id),
       kind: "frame",

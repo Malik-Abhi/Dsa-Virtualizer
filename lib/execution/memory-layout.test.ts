@@ -1,11 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { executeJavaScript } from "./interpreter";
-import {
-  layoutMemory,
-  edgePath,
-  FRAME_LOOP_LABEL_HEIGHT,
-} from "../visualization/memory-layout";
+import { layoutMemory, edgePath } from "../visualization/memory-layout";
 const layout = (source: string) => {
   const result = executeJavaScript(source);
   assert.equal(result.error, undefined);
@@ -176,7 +172,7 @@ test("for loops share their frame instead of creating extra cards or arrows", ()
   assert.equal(graph.nodes.filter((node) => node.kind === "loop").length, 0);
   const frame = graph.nodes.find((node) => node.kind === "frame")!;
   const plainFrame = plain.nodes.find((node) => node.id === frame.id)!;
-  assert.equal(frame.height - plainFrame.height, FRAME_LOOP_LABEL_HEIGHT);
+  assert.equal(frame.height, plainFrame.height);
   assert.deepEqual(graph.edges, plain.edges);
   assert.equal(graph.nodes.filter((node) => node.kind === "heap").length, 2);
 });
@@ -195,7 +191,7 @@ test("nested for labels belong only to their call frame and while cards remain a
     (node) => node.id === `frame:${memory.frames.at(-1)!.id}`,
   )!;
   const plainCaller = plain.nodes.find((node) => node.id === caller.id)!;
-  assert.equal(caller.height - plainCaller.height, FRAME_LOOP_LABEL_HEIGHT * 2);
+  assert.equal(caller.height, plainCaller.height);
   assert.equal(
     graph.nodes.find((node) => node.id === "frame:global")!.height,
     plain.nodes.find((node) => node.id === "frame:global")!.height,

@@ -2921,12 +2921,18 @@ input[type="range"]:disabled {
   color: var(--accent);
 }
 
-.frame-loop-label {
-  height: 22px;
+.memory-variable-name.has-loop-label {
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  gap: 5px;
+}
+.memory-variable-name.has-loop-label > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.iterator-loop-label {
+  flex-shrink: 0;
   color: var(--orange);
-  font: 9px monospace;
-  border-top: 1px solid var(--border);
+  font: 8px monospace;
 }

@@ -13,6 +13,11 @@ export default function RuntimeFrame({
   const inlineLoops = loops.filter(
     (loop) => loop.frameId === frame.id && isInlineForLoop(loop),
   );
+  const iteratorLoops = new Map(
+    inlineLoops.flatMap((loop) =>
+      loop.variables.map((variable) => [variable.id, loop] as const),
+    ),
+  );
   return (
     <section
       className={`runtime-frame frame-${frame.status}`}
@@ -44,8 +49,19 @@ export default function RuntimeFrame({
             className={`memory-variable ${variable.changed ? "binding-changed" : ""}`}
             data-binding={variable.name}
           >
-            <span className="memory-variable-name" title={variable.name}>
-              {variable.name}
+            <span
+              className={`memory-variable-name ${iteratorLoops.has(variable.id) ? "has-loop-label" : ""}`}
+              title={variable.name}
+            >
+              <span>{variable.name}</span>
+              {iteratorLoops.has(variable.id) && (
+                <small
+                  className="iterator-loop-label"
+                  title={`${iteratorLoops.get(variable.id)!.kind} loop · line ${iteratorLoops.get(variable.id)!.line}`}
+                >
+                  for · line {iteratorLoops.get(variable.id)!.line}
+                </small>
+              )}
             </span>
             <MemoryValueBox value={variable.value} changed={variable.changed} />
           </div>
@@ -65,15 +81,6 @@ export default function RuntimeFrame({
           </div>
         )}
       </div>
-      {inlineLoops.map((loop) => (
-        <div
-          className="frame-loop-label"
-          key={loop.id}
-          title={`${loop.condition} · iteration ${loop.iteration} · ${loop.status}`}
-        >
-          {loop.kind} loop · line {loop.line}
-        </div>
-      ))}
     </section>
   );
 }
