@@ -2765,6 +2765,28 @@ input[type="range"]:disabled {
   gap: 8px;
   margin-top: 16px;
 }
+.saved-folder-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  color: var(--accent);
+}
+.saved-folder-filter select {
+  min-width: 0;
+  flex: 1;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-alt);
+  color: var(--text);
+}
+.saved-code-edit {
+  padding: 14px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface-alt);
+}
 .saved-code-row {
   display: flex;
   align-items: center;
@@ -2799,6 +2821,7 @@ input[type="range"]:disabled {
 .saved-code-open small {
   font-size: 10px;
   color: var(--muted);
+  overflow-wrap: anywhere;
 }
 .saved-code-open > svg {
   flex-shrink: 0;

@@ -4,6 +4,7 @@ export const SAVED_CODE_KEY = "dsa-saved-code-v1";
 export type SavedCode = {
   id: string;
   name: string;
+  category?: string;
   source: string;
   language: Language;
   updatedAt: string;
@@ -25,6 +26,7 @@ export function parseSavedCode(raw: string | null): SavedCode[] {
       ids.has(entry.id) ||
       typeof entry.name !== "string" ||
       !entry.name.trim() ||
+      (entry.category !== undefined && typeof entry.category !== "string") ||
       typeof entry.source !== "string" ||
       (entry.language !== "javascript" && entry.language !== "python") ||
       typeof entry.updatedAt !== "string" ||
@@ -35,6 +37,9 @@ export function parseSavedCode(raw: string | null): SavedCode[] {
     return {
       id: entry.id,
       name: entry.name,
+      ...(typeof entry.category === "string" && entry.category.trim()
+        ? { category: entry.category.trim() }
+        : {}),
       source: entry.source,
       language: entry.language,
       updatedAt: entry.updatedAt,

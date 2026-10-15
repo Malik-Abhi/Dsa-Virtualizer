@@ -14,6 +14,7 @@ test("saved snippets round-trip exact source, names and both languages", () => {
     {
       id: "py",
       name: "Prefix sum",
+      category: "Arrays",
       source: "def sum(A):\n    return A[0]\n",
       language: "python",
       updatedAt: "2026-10-07T00:00:00.000Z",
@@ -42,8 +43,28 @@ test("invalid library data is rejected rather than silently discarded", () => {
       { language: "ruby" },
       { updatedAt: "bad date" },
       { id: "" },
+      { category: 123 },
     ].map((change) => JSON.stringify([{ ...valid, ...change }])),
   ]) {
     assert.throws(() => parseSavedCode(raw));
   }
+});
+
+test("legacy snippets remain uncategorized and category names are normalized", () => {
+  const entry = {
+    id: "one",
+    name: "Example",
+    source: "print(1)",
+    language: "python",
+    updatedAt: "2026-10-07T00:00:00.000Z",
+  };
+  assert.deepEqual(parseSavedCode(JSON.stringify([entry])), [entry]);
+  assert.deepEqual(
+    parseSavedCode(JSON.stringify([{ ...entry, category: "  Arrays  " }])),
+    [{ ...entry, category: "Arrays" }],
+  );
+  assert.deepEqual(
+    parseSavedCode(JSON.stringify([{ ...entry, category: " " }])),
+    [entry],
+  );
 });

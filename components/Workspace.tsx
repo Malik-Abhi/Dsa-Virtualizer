@@ -27,6 +27,8 @@ import {
   Save,
   Bookmark,
   ArrowDown,
+  Pencil,
+  Folder,
 } from "lucide-react";
 import CodeEditor from "./editor/CodeEditor";
 import Canvas from "./visualization/Canvas";
@@ -62,11 +64,33 @@ export default function Workspace() {
   const [savedCodes, setSavedCodes] = useState<SavedCode[]>([]);
   const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
   const [saveName, setSaveName] = useState("");
+  const [saveCategory, setSaveCategory] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [editingSaved, setEditingSaved] = useState<{
+    id: string;
+    name: string;
+    category: string;
+  } | null>(null);
   const [storageReady, setStorageReady] = useState(false);
   const [storageError, setStorageError] = useState("");
   const [saveNotice, setSaveNotice] = useState("");
   const [deletedCode, setDeletedCode] = useState<SavedCode | null>(null);
   const activeSaved = savedCodes.find((item) => item.id === activeSavedId);
+  const categories = [
+    ...new Set(
+      savedCodes.flatMap((item) => (item.category ? [item.category] : [])),
+    ),
+  ].sort((a, b) => a.localeCompare(b));
+  const visibleSavedCodes = savedCodes.filter(
+    (item) =>
+      (categoryFilter === "all" ||
+        (categoryFilter === "uncategorized"
+          ? !item.category
+          : item.category === categoryFilter.slice(9))) &&
+      `${item.name} ${item.language} ${item.category ?? ""}`
+        .toLowerCase()
+        .includes(search.toLowerCase()),
+  );
   const hasUnsavedChanges =
     !!activeSaved &&
     (source !== activeSaved.source || language !== activeSaved.language);
@@ -98,6 +122,7 @@ export default function Workspace() {
     }
   };
   const openSave = () => {
+    setSaveCategory(activeSaved?.category ?? "");
     setSaveName(
       activeSaved?.name ??
         (language === "javascript" ? example.name : "Python algorithm"),
@@ -111,6 +136,7 @@ export default function Workspace() {
     const item: SavedCode = {
       id: !asCopy && activeSaved ? activeSaved.id : crypto.randomUUID(),
       name,
+      ...(saveCategory.trim() ? { category: saveCategory.trim() } : {}),
       source: currentSource.current,
       language,
       updatedAt: new Date().toISOString(),
@@ -126,6 +152,22 @@ export default function Workspace() {
     setSaveNotice(`Saved “${name}” locally.`);
     setModal(null);
     setTab("workspace");
+  };
+  const updateSavedDetails = () => {
+    if (!editingSaved?.name.trim()) return;
+    const updated = savedCodes.map((item) => {
+      if (item.id !== editingSaved.id) return item;
+      return {
+        ...item,
+        name: editingSaved.name.trim(),
+        category: editingSaved.category.trim() || undefined,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+    if (persistSaved(updated)) {
+      setEditingSaved(null);
+      setCategoryFilter("all");
+    }
   };
   const openSavedCode = (item: SavedCode) => {
     currentSource.current = item.source;
@@ -339,6 +381,8 @@ export default function Workspace() {
               onClick={() => {
                 setTab("saved");
                 setSearch("");
+                setCategoryFilter("all");
+                setEditingSaved(null);
                 setModal("saved");
               }}
             >
@@ -784,6 +828,17 @@ export default function Workspace() {
                         onChange={(e) => setSaveName(e.target.value)}
                         placeholder="e.g. Even-index prefix sum"
                       />
+                      <label htmlFor="saved-code-category">
+                        Category folder (optional)
+                      </label>
+                      <input
+                        id="saved-code-category"
+                        list="saved-category-options"
+                        value={saveCategory}
+                        maxLength={80}
+                        onChange={(e) => setSaveCategory(e.target.value)}
+                        placeholder="Choose or create a category"
+                      />
                       {storageError && (
                         <p className="saved-error" role="alert">
                           {storageError}
@@ -830,19 +885,90 @@ export default function Workspace() {
                         onChange={(e) => setSearch(e.target.value)}
                       />
                     </label>
+                    <label className="saved-folder-filter">
+                      <Folder size={16} />
+                      <select
+                        aria-label="Category folder"
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                      >
+                        <option value="all">All folders</option>
+                        <option value="uncategorized">Uncategorized</option>
+                        {categories.map((category) => (
+                          <option key={category} value={`category:${category}`}>
+                            {category}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                     {storageError && (
                       <p className="saved-error" role="alert">
                         {storageError}
                       </p>
                     )}
                     <div className="saved-code-list">
-                      {savedCodes
-                        .filter((item) =>
-                          `${item.name} ${item.language}`
-                            .toLowerCase()
-                            .includes(search.toLowerCase()),
-                        )
-                        .map((item) => (
+                      {visibleSavedCodes.map((item) =>
+                        editingSaved?.id === item.id ? (
+                          <form
+                            className="save-code-form saved-code-edit"
+                            key={item.id}
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              updateSavedDetails();
+                            }}
+                          >
+                            <label htmlFor="edit-saved-name">
+                              Snippet name
+                            </label>
+                            <input
+                              id="edit-saved-name"
+                              value={editingSaved.name}
+                              maxLength={80}
+                              required
+                              onChange={(e) =>
+                                setEditingSaved({
+                                  ...editingSaved,
+                                  name: e.target.value,
+                                })
+                              }
+                            />
+                            <label htmlFor="edit-saved-category">
+                              Category folder (optional)
+                            </label>
+                            <input
+                              id="edit-saved-category"
+                              list="saved-category-options"
+                              value={editingSaved.category}
+                              maxLength={80}
+                              placeholder="Choose or create a category"
+                              onChange={(e) =>
+                                setEditingSaved({
+                                  ...editingSaved,
+                                  category: e.target.value,
+                                })
+                              }
+                            />
+                            <div className="save-code-actions">
+                              <button
+                                className="secondary-button save-primary"
+                                type="submit"
+                                disabled={
+                                  !storageReady || !editingSaved.name.trim()
+                                }
+                              >
+                                <Check size={14} />
+                                Save changes
+                              </button>
+                              <button
+                                className="secondary-button"
+                                type="button"
+                                onClick={() => setEditingSaved(null)}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
                           <div className="saved-code-row" key={item.id}>
                             <button
                               className="saved-code-open"
@@ -860,9 +986,25 @@ export default function Workspace() {
                                   {new Date(
                                     item.updatedAt,
                                   ).toLocaleDateString()}
+                                  {" · "}
+                                  {item.category ?? "Uncategorized"}
                                 </small>
                               </span>
                               <ArrowUpRight size={15} />
+                            </button>
+                            <button
+                              className="icon-button"
+                              aria-label={`Edit ${item.name}`}
+                              title="Rename or move to a category"
+                              onClick={() =>
+                                setEditingSaved({
+                                  id: item.id,
+                                  name: item.name,
+                                  category: item.category ?? "",
+                                })
+                              }
+                            >
+                              <Pencil size={14} />
                             </button>
                             <button
                               className="icon-button"
@@ -885,7 +1027,8 @@ export default function Workspace() {
                               <Trash2 size={14} />
                             </button>
                           </div>
-                        ))}
+                        ),
+                      )}
                       {!savedCodes.length && (
                         <div className="saved-empty">
                           <Bookmark size={26} />
@@ -904,16 +1047,11 @@ export default function Workspace() {
                           </button>
                         </div>
                       )}
-                      {!!savedCodes.length &&
-                        !savedCodes.some((item) =>
-                          `${item.name} ${item.language}`
-                            .toLowerCase()
-                            .includes(search.toLowerCase()),
-                        ) && (
-                          <p className="saved-empty">
-                            No snippets match your search.
-                          </p>
-                        )}
+                      {!!savedCodes.length && !visibleSavedCodes.length && (
+                        <p className="saved-empty">
+                          No snippets in this folder match your search.
+                        </p>
+                      )}
                     </div>
                     {deletedCode && (
                       <div className="saved-undo" role="status">
@@ -1120,6 +1258,11 @@ export default function Workspace() {
                     </div>
                   </>
                 )}
+                <datalist id="saved-category-options">
+                  {categories.map((category) => (
+                    <option key={category} value={category} />
+                  ))}
+                </datalist>
               </motion.section>
             </motion.div>
           )}
