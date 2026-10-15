@@ -169,7 +169,10 @@ test("for loops share their frame instead of creating extra cards or arrows", ()
   )!.memory;
   const graph = layoutMemory(memory);
   const plain = layoutMemory({ ...memory, loops: [] });
-  assert.equal(graph.nodes.filter((node) => node.kind === "loop").length, 0);
+  assert.equal(
+    graph.nodes.filter((node) => node.id.startsWith("loop:")).length,
+    0,
+  );
   const frame = graph.nodes.find((node) => node.kind === "frame")!;
   const plainFrame = plain.nodes.find((node) => node.id === frame.id)!;
   assert.equal(frame.height, plainFrame.height);
@@ -177,7 +180,7 @@ test("for loops share their frame instead of creating extra cards or arrows", ()
   assert.equal(graph.nodes.filter((node) => node.kind === "heap").length, 2);
 });
 
-test("nested for labels belong only to their call frame and while cards remain available", () => {
+test("all loops share their call frame without extra cards", () => {
   const result = executeJavaScript(
     "function f(){for(let i=0;i<1;i++){for(let j=0;j<1;j++){let k=0;while(k<1){k++;}}}} f();",
   );
@@ -196,5 +199,8 @@ test("nested for labels belong only to their call frame and while cards remain a
     graph.nodes.find((node) => node.id === "frame:global")!.height,
     plain.nodes.find((node) => node.id === "frame:global")!.height,
   );
-  assert.equal(graph.nodes.filter((node) => node.kind === "loop").length, 1);
+  assert.equal(
+    graph.nodes.filter((node) => node.id.startsWith("loop:")).length,
+    0,
+  );
 });

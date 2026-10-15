@@ -353,3 +353,17 @@ test("Python assignment calls and augmented assignments retain actual evaluation
   ]);
   assert.deepEqual(result.steps.at(-1)!.output, ["1 7"]);
 });
+
+test("Python while labels use the changing control variable only", () => {
+  const result = run(
+    "A = [1,2]\ni = 0\ntotal = 0\nwhile i < len(A):\n    total += A[i]\n    i += 1\nprint(total)",
+  );
+  const loops = result.steps.flatMap((step) => step.memory.loops ?? []);
+  assert.ok(loops.length);
+  for (const loop of loops)
+    assert.deepEqual(
+      loop.variables.map((variable) => variable.name),
+      ["i"],
+    );
+  assert.deepEqual(result.steps.at(-1)!.output, ["3"]);
+});

@@ -30,7 +30,7 @@ export default function MemoryValueBox({
       : formatMemoryValue(value);
   return (
     <div
-      className={`memory-value-box ${reference && !pending ? "is-reference" : ""} ${changed ? "is-changed" : ""} ${small ? "small" : ""}`}
+      className={`memory-value-box ${!pending && value.kind === "primitive" && value.type === "number" ? "is-number" : ""} ${reference && !pending ? "is-reference" : ""} ${changed ? "is-changed" : ""} ${small ? "small" : ""}`}
       title={
         pending ? "This frame has not returned yet." : formatMemoryValue(value)
       }

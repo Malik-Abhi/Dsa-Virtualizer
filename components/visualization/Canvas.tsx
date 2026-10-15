@@ -13,7 +13,6 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ExecutionStep, ExecutionError } from "@/types/execution";
 import { layoutMemory, type Point } from "@/lib/visualization/memory-layout";
-import LoopBlock from "./LoopBlock";
 import RuntimeFrame from "./RuntimeFrame";
 import HeapObject from "./HeapObject";
 import ReferenceArrows from "./ReferenceArrows";
@@ -92,9 +91,6 @@ export default function Canvas({
   );
   const frames = new Map(
     memory?.frames.map((frame) => [`frame:${frame.id}`, frame]),
-  );
-  const loops = new Map(
-    memory?.loops?.map((loop) => [`loop:${loop.id}`, loop]),
   );
   const heap = new Map(
     memory?.heap.map((object) => [`heap:${object.id}`, object]),
@@ -275,8 +271,7 @@ export default function Canvas({
             {layout.nodes.map((node) => {
               const position = positions.get(node.id)!,
                 frame = frames.get(node.id),
-                object = heap.get(node.id),
-                loop = loops.get(node.id);
+                object = heap.get(node.id);
               return (
                 <motion.div
                   key={node.id}
@@ -311,7 +306,7 @@ export default function Canvas({
                   }}
                   onPointerCancel={stop}
                   role="group"
-                  aria-label={`Move ${frame?.name ?? loop?.kind ?? object?.kind} ${frame?.id ?? loop?.id ?? object?.id}`}
+                  aria-label={`Move ${frame?.name ?? object?.kind} ${frame?.id ?? object?.id}`}
                   tabIndex={0}
                   onKeyDown={(e) => {
                     if (
@@ -353,9 +348,7 @@ export default function Canvas({
                     }
                   }}
                 >
-                  {loop ? (
-                    <LoopBlock loop={loop} />
-                  ) : frame ? (
+                  {frame ? (
                     <RuntimeFrame frame={frame} loops={memory?.loops} />
                   ) : object && memory ? (
                     <HeapObject object={object} memory={memory} />

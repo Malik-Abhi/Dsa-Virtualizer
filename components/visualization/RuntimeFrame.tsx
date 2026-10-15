@@ -1,7 +1,6 @@
 "use client";
 import { Layers, Globe2, GripVertical } from "lucide-react";
 import type { RuntimeFrame as Frame, RuntimeLoop } from "@/types/memory";
-import { isInlineForLoop } from "@/lib/visualization/memory-layout";
 import MemoryValueBox from "./MemoryValueBox";
 export default function RuntimeFrame({
   frame,
@@ -10,13 +9,17 @@ export default function RuntimeFrame({
   frame: Frame;
   loops?: RuntimeLoop[];
 }) {
-  const inlineLoops = loops.filter(
-    (loop) => loop.frameId === frame.id && isInlineForLoop(loop),
-  );
+  const inlineLoops = loops.filter((loop) => loop.frameId === frame.id);
   const iteratorLoops = new Map(
     inlineLoops.flatMap((loop) =>
       loop.variables.map((variable) => [variable.id, loop] as const),
     ),
+  );
+  const unboundLoops = inlineLoops.filter(
+    (loop) =>
+      !loop.variables.some((variable) =>
+        frame.variables.some((binding) => binding.id === variable.id),
+      ),
   );
   return (
     <section
@@ -32,6 +35,15 @@ export default function RuntimeFrame({
           )}
         </span>
         <strong title={frame.name}>{frame.name}</strong>
+        {unboundLoops.map((loop) => (
+          <small
+            className="iterator-loop-label"
+            key={loop.id}
+            title={loop.condition}
+          >
+            {loop.kind} · line {loop.line}
+          </small>
+        ))}
         <GripVertical size={13} />
       </header>
       <div className="frame-meta">
@@ -59,7 +71,8 @@ export default function RuntimeFrame({
                   className="iterator-loop-label"
                   title={`${iteratorLoops.get(variable.id)!.kind} loop · line ${iteratorLoops.get(variable.id)!.line}`}
                 >
-                  for · line {iteratorLoops.get(variable.id)!.line}
+                  {iteratorLoops.get(variable.id)!.kind} · L
+                  {iteratorLoops.get(variable.id)!.line}
                 </small>
               )}
             </span>

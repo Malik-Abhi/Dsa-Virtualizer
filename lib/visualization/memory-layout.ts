@@ -1,19 +1,12 @@
-import type {
-  HeapObject,
-  MemorySnapshot,
-  MemoryValue,
-  RuntimeLoop,
-} from "@/types/memory";
+import type { HeapObject, MemorySnapshot, MemoryValue } from "@/types/memory";
 export const FRAME_WIDTH = 260,
   FRAME_ROW = 34,
   HEAP_ROW = 32,
   ARRAY_CELL = 44;
-export const isInlineForLoop = (loop: RuntimeLoop) =>
-  loop.kind === "for" || loop.kind === "for…of";
 export type Point = { x: number; y: number };
 export type MemoryNode = Point & {
   id: string;
-  kind: "frame" | "heap" | "loop";
+  kind: "frame" | "heap";
   width: number;
   height: number;
 };
@@ -33,7 +26,6 @@ export type MemoryLayout = {
   height: number;
 };
 export const frameNodeId = (id: string) => `frame:${id}`;
-export const loopNodeId = (id: string) => `loop:${id}`;
 export const heapNodeId = (id: string) => `heap:${id}`;
 export function arrayPointerHeight(objectId: string, memory?: MemorySnapshot) {
   return memory?.pointers.some((p) => p.objectId === objectId && p.index < 24)
@@ -81,19 +73,6 @@ export function layoutMemory(memory: MemorySnapshot): MemoryLayout {
       height,
     });
     frameY += height + 16;
-    for (const loop of memory.loops ?? []) {
-      if (loop.frameId !== frame.id || isInlineForLoop(loop)) continue;
-      const loopHeight = 108 + loop.variables.length * FRAME_ROW;
-      nodes.push({
-        id: loopNodeId(loop.id),
-        kind: "loop",
-        x: 24,
-        y: frameY,
-        width: FRAME_WIDTH,
-        height: loopHeight,
-      });
-      frameY += loopHeight + 16;
-    }
   }
   const placed = new Set<string>(),
     byId = new Map(memory.heap.map((o) => [o.id, o]));
@@ -267,19 +246,6 @@ export function layoutMemory(memory: MemorySnapshot): MemoryLayout {
         true,
       );
   }
-  for (const loop of (memory.loops ?? []).filter(
-    (loop) => !isInlineForLoop(loop),
-  ))
-    loop.variables.forEach((variable, i) =>
-      edge(
-        `${loop.id}:${variable.id}`,
-        loopNodeId(loop.id),
-        variable.value,
-        { x: FRAME_WIDTH - 12, y: 118 + i * FRAME_ROW },
-        variable.name,
-        variable.changed,
-      ),
-    );
   for (const object of memory.heap) {
     if (object.kind === "object")
       object.properties.forEach((property, i) =>

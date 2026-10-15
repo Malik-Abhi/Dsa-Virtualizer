@@ -357,3 +357,18 @@ test("assignment annotations show inputs and result without reevaluating calls",
   ]);
   assert.deepEqual(result.steps.at(-1)!.output, ["1"]);
 });
+
+test("while and do-while labels track control variables without copying accumulators", () => {
+  const result = executeJavaScript(
+    "const A=[1,2]; let i=0; let total=0; while(i<A.length){total+=A[i];i++;} do {total+=i;i--;} while(i>0);",
+  );
+  assert.equal(result.error, undefined);
+  const loops = result.steps.flatMap((step) => step.memory.loops ?? []);
+  assert.ok(loops.some((loop) => loop.kind === "while"));
+  assert.ok(loops.some((loop) => loop.kind === "do…while"));
+  for (const loop of loops)
+    assert.deepEqual(
+      loop.variables.map((variable) => variable.name),
+      ["i"],
+    );
+});

@@ -143,7 +143,12 @@ class InstrumentPython(ast.NodeTransformer):
 
     def instrument_loop(self, node, kind):
         condition = ast.unparse(node.test) if isinstance(node, ast.While) else f'{ast.unparse(node.target)} in {ast.unparse(node.iter)}'
-        names = sorted({item.id for item in ast.walk(node.target if isinstance(node, ast.For) else node) if isinstance(item, ast.Name) and (not isinstance(node, ast.For) or isinstance(item.ctx, ast.Store))})
+        if isinstance(node, ast.For):
+            names = sorted({item.id for item in ast.walk(node.target) if isinstance(item, ast.Name) and isinstance(item.ctx, ast.Store)})
+        else:
+            condition_names = {item.id for item in ast.walk(node.test) if isinstance(item, ast.Name)}
+            written_names = {item.id for statement in node.body for item in ast.walk(statement) if isinstance(item, ast.Name) and isinstance(item.ctx, ast.Store)}
+            names = sorted(condition_names & written_names or condition_names or written_names)
         if isinstance(node, ast.While):
             node.test = self.condition_test(node.test, node.lineno)
             node.body = [replacement for statement in node.body for replacement in self.statement(statement)]

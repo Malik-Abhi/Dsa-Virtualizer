@@ -192,7 +192,42 @@ export function executeJavaScript(source: string): ExecutionResult {
       iteratorBindings(n.init);
       iteratorBindings(n.update);
       if (!names.size) iteratorBindings(n.test?.left ?? n.test);
-    } else visit(n);
+    } else {
+      visit(n.test);
+      const conditionNames = new Set(names);
+      names.clear();
+      const writes = (node: Node) => {
+        if (
+          !node ||
+          typeof node !== "object" ||
+          [
+            "FunctionDeclaration",
+            "FunctionExpression",
+            "ArrowFunctionExpression",
+          ].includes(node.type)
+        )
+          return;
+        if (node.type === "AssignmentExpression") iteratorBindings(node.left);
+        if (node.type === "UpdateExpression") iteratorBindings(node.argument);
+        for (const [key, value] of Object.entries(node)) {
+          if (["loc", "start", "end"].includes(key)) continue;
+          if (Array.isArray(value)) value.forEach(writes);
+          else if (value && typeof value === "object") writes(value);
+        }
+      };
+      writes(n.body);
+      const writtenNames = new Set(names);
+      names.clear();
+      const controls = [...conditionNames].filter((name) =>
+        writtenNames.has(name),
+      );
+      for (const name of controls.length
+        ? controls
+        : conditionNames.size
+          ? conditionNames
+          : writtenNames)
+        names.add(name);
+    }
     const loop = {
       id: `loop-${++loopSequence}`,
       frameId: scope.frameId,
